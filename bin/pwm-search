@@ -1,0 +1,24 @@
+#!/usr/bin/env node
+
+require('colors')
+var program = require('commander')
+var database = require('../database')
+
+program.parse(process.argv)
+
+if (!program.args.length) {
+  console.error('Please enter a search query')
+}
+
+database.search(program.args[0], function(error, results) {
+  if (error) {
+    console.error(error.message)
+    return
+  }
+  results.forEach(function(result) {
+    console.log(
+      result.class_name.yellow + ': ' +
+      result.summary
+    )
+  })
+})

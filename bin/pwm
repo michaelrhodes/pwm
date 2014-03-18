@@ -2,5 +2,6 @@
 
 require('commander')
   .version(require('../package.json').version)
-  .command('install [module]', 'install module/s by name or from module.json')
+  .command('install', 'install module/s by name or from module.json')
+  .command('search', 'search for modules by name')
   .parse(process.argv)

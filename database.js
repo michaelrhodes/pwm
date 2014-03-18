@@ -2,6 +2,7 @@ var nedb = require('nedb')
 var mkdir = require('fs').mkdirSync
 var join = require('path').join
 var home = require('home-dir')()
+var Fuse = require('fuse.js')
 
 var directory = join(home, '.pwm')
 var file = join(directory, 'modules')
@@ -44,5 +45,21 @@ module.exports = {
 
         callback(null, info)
       }) 
+  },
+  search: function(query, callback) {
+    db.find({})
+      .exec(function(error, modules) {
+        if (error) {
+          callback(error)
+          return
+        }
+     
+        var fuse = new Fuse(modules, {
+          keys: ['title', 'class_name', 'summary'],
+          threshold: 0.2
+        })
+       
+        callback(null, fuse.search(query)) 
+      })
   }
 }
