@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "A command-line tool for managing ProcessWire modules.",
   "bin": {
-    "pwm": "bin/pwm"
+    "pwm": "bin/pwm",
     "pwm-install": "bin/pwm-install"
   },
   "scripts": {
