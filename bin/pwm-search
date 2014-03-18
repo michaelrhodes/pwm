@@ -11,9 +11,11 @@ if (!program.args.length) {
 }
 
 database.search(program.args[0], function(error, results) {
-  if (error) {
-    console.error(error.message)
-    return
+  if (error || !results.length) {
+    return console.error(error ?
+      error.message :
+      'No results for ' + program.args[0]
+    )
   }
   console.log('')
   results.forEach(function(result) {
