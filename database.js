@@ -18,11 +18,11 @@ var db = new nedb({
 var request = require('hyperdirect').request
 var parse = require('JSONStream').parse
 
-request('http://modules.processwire.com/export-json/?apikey=pw223&limit=100')
+request('http://modules.processwire.com/export-json?apikey=pw223&limit=100')
   .pipe(parse('items'))
   .on('data', function(json) {
     db.insert(json, function(error, inserted) {
-      console.log(inserted)
+      console.log(inserted.length)
     })
   })
 */

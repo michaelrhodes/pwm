@@ -31,9 +31,9 @@
     "colors": "~0.6.2",
     "find-parent-dir": "~0.2.1",
     "nedb": "~0.10.4",
-    "unzip": "~0.1.9",
     "hyperdirect": "0.0.0",
     "glob": "~3.2.9",
-    "rimraf": "~2.2.6"
+    "rimraf": "~2.2.6",
+    "decompress": "~0.1.6"
   }
 }

@@ -6,7 +6,7 @@ var path = require('path')
 var program = require('commander')
 var find = require('find-parent-dir')
 var request = require('hyperdirect').request
-var unzip = require('unzip').Extract
+var unzip = require('decompress').extract
 var glob = require('glob')
 var rm = require('rimraf').sync
 var database = require('../database')
@@ -27,7 +27,6 @@ var install = function(error, module) {
   var directory = path.join(modules, module.class_name)
 
   // Download and unzip
-  var first = true
   console.log('pwm ' + 'http '.green + 'GET '.magenta + module.download_url)
   request(module.download_url)
     .on('error', function(error) {
@@ -36,7 +35,7 @@ var install = function(error, module) {
     .on('end', function() {
       console.log('pwm ' + 'http '.green + '200 '.magenta + module.download_url)
     })
-    .pipe(unzip({ path: directory }))
+    .pipe(unzip({ ext: '.zip', path: directory }))
     .on('error', function(error) {
       console.error('pwm ' + error.message.red)
     })
