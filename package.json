@@ -4,6 +4,7 @@
   "description": "A command-line tool for managing ProcessWire modules.",
   "bin": {
     "pwm": "bin/pwm"
+    "pwm-install": "bin/pwm-install"
   },
   "scripts": {
     "test": "tape test/*.js"
