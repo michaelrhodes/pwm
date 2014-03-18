@@ -1,0 +1,38 @@
+{
+  "name": "pwm",
+  "version": "0.0.0",
+  "description": "A command-line tool for managing ProcessWire modules.",
+  "bin": {
+    "pwm": "bin/pwm"
+  },
+  "scripts": {
+    "test": "tape test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:michaelrhodes/pwm.git"
+  },
+  "keywords": [
+    "ProcessWire",
+    "module"
+  ],
+  "author": "Michael Rhodes",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/michaelrhodes/pwm/issues"
+  },
+  "homepage": "https://github.com/michaelrhodes/pwm",
+  "dependencies": {
+    "JSONStream": "~0.8.0",
+    "concat-stream": "~1.4.4",
+    "home-dir": "~0.1.2",
+    "commander": "~2.1.0",
+    "colors": "~0.6.2",
+    "find-parent-dir": "~0.2.1",
+    "nedb": "~0.10.4",
+    "unzip": "~0.1.9",
+    "hyperdirect": "0.0.0",
+    "glob": "~3.2.9",
+    "rimraf": "~2.2.6"
+  }
+}

@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+
+require('commander')
+  .version(require('../package.json').version)
+  .command('install [module]', 'install module/s by name or from module.json')
+  .parse(process.argv)

@@ -1,0 +1,117 @@
+#!/usr/bin/env node
+
+require('colors')
+var fs = require('fs')
+var path = require('path')
+var program = require('commander')
+var find = require('find-parent-dir')
+var request = require('hyperdirect').request
+var unzip = require('unzip').Extract
+var glob = require('glob')
+var rm = require('rimraf').sync
+var database = require('../database')
+
+program.option('--save', 'Add module to module.json file')
+program.parse(process.argv)
+
+var cwd = process.cwd()
+var modules = path.join(cwd, 'site/modules')
+
+// Install an individual module
+var install = function(error, module) {
+  if (error) {
+    console.error(error.message)
+    return
+  }
+
+  var directory = path.join(modules, module.class_name)
+
+  // Download and unzip
+  var first = true
+  console.log('pwm ' + 'http '.green + 'GET '.magenta + module.download_url)
+  request(module.download_url)
+    .on('error', function(error) {
+      console.error('pwm ' + error.message.red)
+    })
+    .on('end', function() {
+      console.log('pwm ' + 'http '.green + '200 '.magenta + module.download_url)
+    })
+    .pipe(unzip({ path: directory }))
+    .on('error', function(error) {
+      console.error('pwm ' + error.message.red)
+    })
+    .on('close', function() {
+      if (program.save) {
+        // Find modules in json
+        find(cwd, 'module.json', function(error, directory) {
+          if (error || !directory) {
+            var json_path = path.join(cwd, 'module.json')
+            var json = {}
+          }
+          else { 
+            var json_path = path.join(directory, 'module.json')
+            var json = require(json_path) || {}
+          }
+
+          json.modules = json.modules || []
+          if (json.modules.indexOf(module.class_name) < 0) {
+            json.modules.push(module.class_name)
+            fs.writeFileSync(json_path, JSON.stringify(json, null, 2))
+          }
+        })
+      }
+
+      // Remove wrapping folder
+      glob('*', { cwd: directory }, function(error, files) {
+        if (files.length === 1) {
+          var file = path.join(directory, files[0])
+          fs.stat(file, function(error, stat) {
+            if (error) {
+              console.error(error.message)
+              return
+            }
+            if (stat.isDirectory()) {
+              var temp = path.join(
+                modules, '.' + module.class_name
+              ) 
+              fs.renameSync(file, temp)
+              rm(directory)
+              fs.renameSync(temp, directory)
+              console.log(
+                module.class_name + '@' + module.module_version + ' ' +
+                directory.replace(cwd + '/', '')
+              )
+            }
+          })
+        }
+        else {
+          console.log(
+            module.class_name + '@' + module.module_version + ' ' +
+            directory.replace(cwd + '/', '')
+          )
+        }
+      }) 
+    })
+}
+
+// Find modules passed into program
+if (program.args.length) {
+  return program.args.forEach(function(module) {
+    database.find(module, install)
+  })
+}
+
+// Find modules in json
+find(cwd, 'module.json', function(error, directory) {
+  if (error || !directory) {
+    return console.error(error ?
+      error.message :
+      'Couldn’t find a module.json file.'
+    )
+  }
+
+  var json = require(path.join(directory, 'module.json'))
+  json.modules.forEach(function(module) {
+    database.find(module, install)
+  })
+})
