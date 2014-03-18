@@ -15,10 +15,12 @@ database.search(program.args[0], function(error, results) {
     console.error(error.message)
     return
   }
+  console.log('')
   results.forEach(function(result) {
     console.log(
-      result.class_name.yellow + ': ' +
-      result.summary
+      '  ' + result.class_name.yellow + ' ' +
+      result.summary + '\n' +
+      '  ' + result.url.grey + '\n'
     )
   })
 })
