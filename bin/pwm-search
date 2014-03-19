@@ -10,11 +10,13 @@ if (!program.args.length) {
   console.error('Please enter a search query')
 }
 
-database.search(program.args.join(' '), function(error, results) {
+var query = program.args.join(' ')
+
+database.search(query, function(error, results) {
   if (error || !results.length) {
     return console.error(error ?
       error.message :
-      'No results for ' + program.args[0]
+      'No results for '.grey + query.yellow
     )
   }
   console.log('')
