@@ -18,7 +18,6 @@ var cwd = process.cwd()
 var root = cwd
 var siteModules = path.join(root, 'site/modules')
 
-console.log(siteModules)
 if (!fs.existsSync(siteModules)) {
   root = (
     find.sync(cwd, 'module.json') ||
