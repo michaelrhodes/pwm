@@ -20,7 +20,7 @@ database.search(program.args.join(' '), function(error, results) {
   console.log('')
   results.forEach(function(result) {
     console.log(
-      '  ' + result.class_name.yellow + ' ' +
+      '  ' + result.class_name.yellow + ': ' +
       result.summary + '\n' +
       '  ' + result.url.grey + '\n'
     )
