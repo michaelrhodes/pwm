@@ -33,9 +33,7 @@ if (!fs.existsSync(siteModules)) {
   process.exit(1)
 }
 
-var fail = function(error) {
-  console.error('pwm ' + error.message.red)
-}
+var moduleJsonPath = path.join(root, 'module.json')
 
 // Find modules passed into program
 if (program.args.length) {
@@ -46,7 +44,21 @@ if (program.args.length) {
         identifier.red + ' is not installed.'.grey
       )
     }
-    rm(module)
-    console.log('Uninstalled '.grey + identifier.yellow)
+    try {
+      rm(module)
+      if (fs.existsSync(moduleJsonPath)) {
+        var json = require(moduleJsonPath)
+        if (json.modules) {
+          delete json.modules[identifier]
+          fs.writeFileSync(moduleJsonPath, JSON.stringify(json, null, 2))
+        }
+      }
+      console.log('Uninstalled '.grey + identifier.yellow)
+    }
+    catch(e) {
+      console.error(error.message)
+      process.exit(1)
+    }
+    
   })
 }
