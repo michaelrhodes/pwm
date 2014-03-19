@@ -58,7 +58,7 @@ module.exports = {
           ))
         }
 
-        callback(null, info)
+        callback(null, info, version)
       }) 
   },
   search: function(query, callback) {

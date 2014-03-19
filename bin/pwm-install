@@ -8,6 +8,7 @@ var find = require('find-parent-dir')
 var request = require('hyperdirect').request
 var unzip = require('decompress').extract
 var glob = require('glob')
+var semver = require('semver')
 var rm = require('rimraf').sync
 var database = require('../database')
 
@@ -15,9 +16,12 @@ program.option('--save', 'Add module to module.json file')
 program.parse(process.argv)
 
 var cwd = process.cwd()
+
+// Assume we are in the project root
 var root = cwd
 var siteModules = path.join(root, 'site/modules')
 
+// If we aren’t, try to find the actual root
 if (!fs.existsSync(siteModules)) {
   root = (
     find.sync(cwd, 'module.json') ||
@@ -27,8 +31,8 @@ if (!fs.existsSync(siteModules)) {
   )
 }
 
+// Check one last time
 siteModules = path.join(root, 'site/modules')
-
 if (!fs.existsSync(siteModules)) {
   console.error(
     'Unable to find the '.grey + 'site/modules'.yellow +
@@ -38,81 +42,135 @@ if (!fs.existsSync(siteModules)) {
   process.exit(1)
 }
 
+// Load module.json
 var moduleJsonPath = path.join(root, 'module.json')
 var moduleJson = (fs.existsSync(moduleJsonPath) ?
   require(moduleJsonPath) : {}
 )
 
-
-
 var log = function(message, type, status) {
-  console.log('pwm ' + [type ? type.green : '', status ? status.magenta : '', message].join(' '))
+  var type = (type ? type.green : '')
+  var status = (status ? status.magenta : '')
+  var output = [type, status, message].join(' ')
+
+  console.log('pwm ' +  output)
 }
 
-var fail = function(error) {
-  console.error('pwm ' + error.message.red)
+var fail = function(type, error) {
+  console.error('pwm ' + type.red + ' ' + error.message)
 }
 
 // Install an individual module
-var install = function(error, module) {
+var install = function(error, module, allowedVersion) {
   if (error) {
-    fail(error)
+    fail('lookup', error)
     return
   }
 
+  // Determine ./site/modules/{class_name} directory
   var directory = path.join(siteModules, module.class_name)
-  rm(directory)
+
+  // Blow away existing copies
+  var exists = fs.existsSync(directory)
+  if (exists) {
+    var hidden = path.join(siteModules, '.old.' + module.class_name)
+    fs.renameSync(directory, hidden)
+  }
  
   // Download and unzip
   log(module.download_url, 'http', 'GET')
   request(module.download_url)
-    .on('error', fail)
+    .on('error', fail.bind(fail, 'download'))
     .on('end', log.bind(log, module.download_url, 'http', '200'))
     .pipe(unzip({ ext: '.zip', path: directory }))
-    .on('error', fail) 
+    .on('error', fail.bind(fail, 'unzip'))
     .on('close', function() {
-      if (program.save) {
-        var modules = moduleJson.modules || {}
-        if (module.class_name in modules) {
-          // Do something if will overide
+      var finish = function() {
+
+        if (exists) {
+          rm(hidden)
         }
-        else {
+
+        // Update/create module.json
+        if (program.save) {
+          var modules = moduleJson.modules || {}
           modules[module.class_name] = '~' + module.module_version
           moduleJson.modules = modules
           fs.writeFileSync(moduleJsonPath, JSON.stringify(moduleJson, null, 2))
         }
-      }
 
-      // Remove wrapping folder
-      glob('*', { cwd: directory }, function(error, files) {
-        if (files.length === 1) {
-          var file = path.join(directory, files[0])
-          fs.stat(file, function(error, stat) {
-            if (error) {
-              fail(error.message)
-              return
-            }
-            if (stat.isDirectory()) {
-              var temp = path.join(
-                siteModules, '.' + module.class_name
-              ) 
-              fs.renameSync(file, temp)
-              rm(directory)
-              fs.renameSync(temp, directory)
-              console.log(
-                module.class_name + '@' + module.module_version + ' ' +
-                directory.replace(root, '')
-              )
-            }
-          })
-        }
-        else {
+        var announceInstall = function() {
           console.log(
             module.class_name + '@' + module.module_version + ' ' +
             directory.replace(root, '')
           )
         }
-      }) 
+
+        // Look at what was installed.
+        glob('*', { cwd: directory }, function(error, files) {
+          // Check for a wrapper directory. 
+          if (files.length === 1) {
+            var file = path.join(directory, files[0])
+            return fs.stat(file, function(error, stat) {
+              if (error) {
+                fail('cleanup', error.message)
+                return
+              }
+
+              // Replace ./site/module/{class_name} with a
+              // renamed version of this wrapper directory.
+              if (stat.isDirectory()) {
+                var temp = path.join(
+                  siteModules, '.' + module.class_name
+                ) 
+                fs.renameSync(file, temp)
+                rm(directory)
+                fs.renameSync(temp, directory)
+              }
+
+              announceInstall() 
+            })
+          }
+
+          announceInstall() 
+        }) 
+      }
+
+      // Double check that this version can be installed
+      if (allowedVersion) {
+        glob('*/*.module', { cwd: directory }, function(error, files) {
+          var version = null
+          if (error || !files.length) {
+            fail('versioncheck', error ? error : new Error(
+              'Couldn’t find the .module file'
+            ))
+            return
+          }
+          return fs.createReadStream(path.join(directory, files[0]))
+            .on('data', function(buffer) {
+              if (version) return
+              var result = buffer.toString().match(
+                /('|")version('|")\s+?=>\s+?([0-9]+)/
+              )
+              version = result ? result[3].split('').join('.') : null
+              if (semver.satisfies(version, allowedVersion)) {
+                finish()
+              }
+              else {
+                if (exists) {
+                  rm(directory)
+                  fs.renameSync(hidden, directory)
+                }
+                fail('versioncheck', new Error(
+                  version + ' is not allowed. See module.json'
+                ))
+              }
+            })
+        })
+      }
+      else {
+        finish()
+      }
     })
 }
 
