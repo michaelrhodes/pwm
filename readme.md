@@ -33,3 +33,8 @@ $ pwm search mp3
 ```sh
 $ npm install -g pwm
 ```
+
+## (temporary/development) install
+``` sh
+$ npm install -g michaelrhodes/pwm
+```
