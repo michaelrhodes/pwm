@@ -25,12 +25,8 @@ $ cat module.json
 
 # does fuzzy search
 $ pwm search mp3
-  
   Audio_MP3: Creates a Field to store MP3-Audiofiles and…
-  http://modules.processwire.com/modules/audio-mp3/
-
   LocalAudioFiles: The Local Audio Files DB is a combination…
-  http://modules.processwire.com/modules/local-audio-files/
 ```
 
 ## (future) install
