@@ -5,6 +5,7 @@
   "bin": {
     "pwm": "bin/pwm",
     "pwm-install": "bin/pwm-install",
+    "pwm-uninstall": "bin/pwm-uninstall",
     "pwm-search": "bin/pwm-search"
   },
   "scripts": {

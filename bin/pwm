@@ -3,5 +3,6 @@
 require('commander')
   .version(require('../package.json').version)
   .command('install', 'install module/s by name or from module.json')
+  .command('uninstall', 'uninstall module/s by name')
   .command('search', 'search for modules by name')
   .parse(process.argv)
