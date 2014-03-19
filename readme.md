@@ -23,6 +23,13 @@ $ cat module.json
   }
 }
 
+# uninstalls update ./module.json
+$ pwm uninstall ModulesManager
+$ cat module.json
+{
+  "modules": {}
+}
+
 # does fuzzy search
 $ pwm search mp3
   Audio_MP3: Creates a Field to store MP3-Audiofiles and…
