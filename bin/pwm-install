@@ -14,18 +14,19 @@ var database = require('../database')
 program.option('--save', 'Add module to module.json file')
 program.parse(process.argv)
 
-var root = (
-  find.sync(__dirname, 'module.json') ||
-  find.sync(__dirname, 'index.php') ||
-  find.sync(__dirname, '.git') ||
-  __dirname
-)
-
+var root = __dirname
 var siteModules = path.join(root, 'site/modules')
-var moduleJsonPath = path.join(root, 'module.json')
-var moduleJson = (fs.existsSync(moduleJsonPath) ?
-  require(moduleJsonPath) : {}
-)
+
+if (!fs.existsSync(siteModules)) {
+  root = (
+    find.sync(__dirname, 'module.json') ||
+    find.sync(__dirname, 'index.php') ||
+    find.sync(__dirname, '.git') ||
+    __dirname
+  )
+}
+
+siteModules = path.join(root, 'site/modules')
 
 if (!fs.existsSync(siteModules)) {
   console.error(
@@ -35,6 +36,13 @@ if (!fs.existsSync(siteModules)) {
   )
   process.exit(1)
 }
+
+var moduleJsonPath = path.join(root, 'module.json')
+var moduleJson = (fs.existsSync(moduleJsonPath) ?
+  require(moduleJsonPath) : {}
+)
+
+
 
 var log = function(message, type, status) {
   console.log('pwm ' + [type ? type.green : '', status ? status.magenta : '', message].join(' '))
