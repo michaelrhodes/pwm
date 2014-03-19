@@ -14,15 +14,17 @@ var database = require('../database')
 program.option('--save', 'Add module to module.json file')
 program.parse(process.argv)
 
-var root = __dirname
+var cwd = process.cwd()
+var root = cwd
 var siteModules = path.join(root, 'site/modules')
 
+console.log(siteModules)
 if (!fs.existsSync(siteModules)) {
   root = (
-    find.sync(__dirname, 'module.json') ||
-    find.sync(__dirname, 'index.php') ||
-    find.sync(__dirname, '.git') ||
-    __dirname
+    find.sync(cwd, 'module.json') ||
+    find.sync(cwd, 'index.php') ||
+    find.sync(cwd, '.git') ||
+    cwd
   )
 }
 
