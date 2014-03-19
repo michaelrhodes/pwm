@@ -17,28 +17,30 @@ program.parse(process.argv)
 var cwd = process.cwd()
 var modules = path.join(cwd, 'site/modules')
 
+var log = function(message, type, status) {
+  console.log('pwm ' + [type ? type.green : '', status ? status.magenta : '', message].join(' '))
+}
+
+var fail = function(error) {
+  console.error('pwm ' + error.message.red)
+}
+
 // Install an individual module
 var install = function(error, module) {
   if (error) {
-    console.error(error.message)
+    fail(error)
     return
   }
 
   var directory = path.join(modules, module.class_name)
 
   // Download and unzip
-  console.log('pwm ' + 'http '.green + 'GET '.magenta + module.download_url)
+  log(module.download_url, 'http', 'GET')
   request(module.download_url)
-    .on('error', function(error) {
-      console.error('pwm ' + error.message.red)
-    })
-    .on('end', function() {
-      console.log('pwm ' + 'http '.green + '200 '.magenta + module.download_url)
-    })
+    .on('error', fail)
+    .on('end', log.bind(log, module.download_url, 'http', '200'))
     .pipe(unzip({ ext: '.zip', path: directory }))
-    .on('error', function(error) {
-      console.error('pwm ' + error.message.red)
-    })
+    .on('error', fail) 
     .on('close', function() {
       if (program.save) {
         // Find modules in json
@@ -52,9 +54,12 @@ var install = function(error, module) {
             var json = require(json_path) || {}
           }
 
-          json.modules = json.modules || []
-          if (json.modules.indexOf(module.class_name) < 0) {
-            json.modules.push(module.class_name)
+          json.modules = json.modules || {}
+          if (module.class_name in json.modules) {
+            // Do something if will overide
+          }
+          else {
+            json.modules[module.class_name] = '~' + module.module_version
             fs.writeFileSync(json_path, JSON.stringify(json, null, 2))
           }
         })
@@ -103,14 +108,13 @@ if (program.args.length) {
 // Find modules in json
 find(cwd, 'module.json', function(error, directory) {
   if (error || !directory) {
-    return console.error(error ?
-      error.message :
-      'Couldn’t find a module.json file.'
+    return fail(
+      error || 'Couldn’t find a module.json file.'
     )
   }
 
   var json = require(path.join(directory, 'module.json'))
-  json.modules.forEach(function(module) {
-    database.find(module, install)
+  Object.keys(json.modules).forEach(function(module) {
+    database.find([module, json.modules[module]].join('@'), install)
   })
 })

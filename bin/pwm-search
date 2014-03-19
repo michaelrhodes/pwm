@@ -10,7 +10,7 @@ if (!program.args.length) {
   console.error('Please enter a search query')
 }
 
-database.search(program.args[0], function(error, results) {
+database.search(program.args.join(' '), function(error, results) {
   if (error || !results.length) {
     return console.error(error ?
       error.message :
