@@ -39,5 +39,8 @@
     "decompress": "~0.1.6",
     "fuse.js": "0.0.0",
     "semver": "~2.2.1"
+  },
+  "devDependencies": {
+    "tape": "~2.10.2"
   }
 }
