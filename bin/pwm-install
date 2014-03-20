@@ -100,10 +100,14 @@ var install = function(error, module, allowedVersion) {
         }
 
         var announceInstall = function() {
-          console.log(
-            module.class_name + '@' + module.module_version + ' ' +
-            directory.replace(root, '')
-          )
+          if (installed.length === toInstall) {
+            installed.forEach(function(module) {
+              console.log(
+                module.class_name + '@' + module.module_version + ' ' +
+                module.directory.replace(root, '').replace(/^\//, '')
+              )
+            })
+          }
         }
 
         // Look at what was installed.
@@ -128,10 +132,14 @@ var install = function(error, module, allowedVersion) {
                 fs.renameSync(temp, directory)
               }
 
+              module.directory = directory
+              installed.push(module)
               announceInstall() 
             })
           }
 
+          module.directory = directory
+          installed.push(module)
           announceInstall() 
         }) 
       }
@@ -174,9 +182,13 @@ var install = function(error, module, allowedVersion) {
     })
 }
 
+var toInstall = 0 
+var installed = []
+
 // Find modules passed into program
 if (program.args.length) {
   return program.args.forEach(function(identifier) {
+    toInstall++
     database.find(identifier, install)
   })
 }
@@ -186,6 +198,7 @@ var names = Object.keys(moduleJson.modules)
 if (names.length) {
   names.forEach(function(name) {
     var identifier = [name, moduleJson.modules[name]].join('@')
+    toInstall++
     database.find(identifier, install)
   })
 }
