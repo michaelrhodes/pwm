@@ -146,6 +146,18 @@ var install = function(error, module, allowedVersion) {
                 /('|")version('|")\s+?=>\s+?([0-9]+)/
               )
               version = result ? result[3].split('').join('.') : null
+              if (!semver.valid(version)) {
+                version = version.split('')
+                version = (
+                  new Array(4 - version.length).join('0.') +
+                  version.join('.')
+                )
+                if (!semver.valid(version)) {
+                  return fail('versioncheck', new Error(
+                    'Invalid version in the .module file'
+                  ))
+                }  
+              }
               if (semver.satisfies(version, allowedVersion)) {
                 finish()
               }
