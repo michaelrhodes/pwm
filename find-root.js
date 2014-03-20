@@ -7,10 +7,9 @@ module.exports = function() {
 
   // Assume we are in the project root
   var root = cwd
-  var siteModules = path.join(root, 'site/modules')
 
   // If we aren’t, try to find the actual root
-  if (!fs.existsSync(siteModules)) {
+  if (!fs.existsSync(path.join(root, 'site/modules'))) {
     root = (
       find.sync(cwd, 'module.json') ||
       find.sync(cwd, 'index.php') ||
