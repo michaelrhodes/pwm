@@ -5,6 +5,7 @@
 
 `pwm` is a command-line module manager for [ProcessWire](https://github.com/ryancramerdesign/ProcessWire). I’m writing it so I don’t have to check third-party modules into source control anymore. Basically, I want an npm-like application that lets me define my dependencies in a JSON file and then pull them in whenever.
 
+Tests are coming; god knows this application needs them.
 
 ## usage
 ```sh
