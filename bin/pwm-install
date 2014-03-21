@@ -10,6 +10,7 @@ var unzip = require('decompress').extract
 var glob = require('glob')
 var semver = require('semver')
 var rm = require('rimraf').sync
+var toSemver = require('../version-to-semver')
 var findRoot = require('../find-root')
 var database = require('../database')
 
@@ -145,24 +146,8 @@ var install = function(error, module, allowedVersion) {
               var result = buffer.toString().match(
                 /('|")version('|")\s+?=>\s+?([0-9]+)/
               )
-              version = result ? result[3].split('').join('.') : null
-              if (!semver.valid(version)) {
-                version = version.split('')
-                version = (
-                  new Array(4 - version.length).join('0.') +
-                  version.join('.')
-                )
-                if (!semver.valid(version)) {
-                  if (exists) {
-                    rm(directory)
-                    fs.renameSync(hidden, directory)
-                  }
-                  return fail('versioncheck', new Error(
-                    'Invalid version in the .module file'
-                  ))
-                }  
-              }
-              if (semver.satisfies(version, allowedVersion)) {
+              version = result ? toSemver(result[3]) : null
+              if (version && semver.satisfies(version, allowedVersion)) {
                 finish()
               }
               else {
@@ -170,9 +155,13 @@ var install = function(error, module, allowedVersion) {
                   rm(directory)
                   fs.renameSync(hidden, directory)
                 }
-                fail('versioncheck', new Error(
-                  version + ' is not allowed. See module.json'
-                ))
+                version ?
+                  fail('versioncheck', new Error(
+                    version + ' is not allowed. See module.json'
+                  )) :
+                  fail('semvercheck', new Error(
+                    'Invalid semver in the .module file'
+                  ))
               }
             })
         })
