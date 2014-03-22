@@ -2,7 +2,6 @@ var run = require('tape')
 var findModuleVersion = require('../lib/find-module-version')
 
 run('find-module-version', function(test) {
-  console.log(__dirname)
   var input = [
     __dirname + '/fixtures/HelloWorld.module',
     __dirname + '/fixtures/HelloWorld-commented.module'
@@ -17,6 +16,10 @@ run('find-module-version', function(test) {
 
   input.forEach(function(module, i) {
     findModuleVersion(module, function(error, version) {
+      if (error) {
+        test.fail(error.message)
+        return
+      }
       test.equal(version, output[i], message[i]) 
     })
   })
