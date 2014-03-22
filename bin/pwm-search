@@ -2,7 +2,7 @@
 
 require('colors')
 var program = require('commander')
-var database = require('../database')
+var database = require('../lib/database')
 
 program.parse(process.argv)
 

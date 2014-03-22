@@ -6,7 +6,7 @@ var path = require('path')
 var program = require('commander')
 var find = require('find-parent-dir')
 var rm = require('rimraf').sync
-var findRoot = require('../find-root')
+var findRoot = require('../lib/find-root')
 
 program.parse(process.argv)
 

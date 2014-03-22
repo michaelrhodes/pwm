@@ -10,9 +10,10 @@ var unzip = require('decompress').extract
 var glob = require('glob')
 var semver = require('semver')
 var rm = require('rimraf').sync
-var toSemver = require('../version-to-semver')
-var findRoot = require('../find-root')
-var database = require('../database')
+var toSemver = require('../lib/version-to-semver')
+var findModuleVersion = require('../lib/find-module-version')
+var findRoot = require('../lib/find-root')
+var database = require('../lib/database')
 
 program.option('--save', 'Add module to module.json file')
 program.parse(process.argv)
@@ -34,23 +35,26 @@ var moduleJson = (fs.existsSync(moduleJsonPath) ?
   require(moduleJsonPath) : {}
 )
 
-var log = function(message, type, status) {
-  var type = (type ? type.green : '')
-  var status = (status ? status.magenta : '')
-  var output = [type, status, message].join(' ')
-
-  console.log('pwm ' +  output)
-}
-
-var fail = function(type, error) {
-  console.error('pwm ' + type.red + ' ' + error.message)
-}
-
 // Install an individual module
 var install = function(error, module, allowedVersion) {
   if (error) {
     fail('lookup', error)
     return
+  }
+
+  var log = function(message, type, status) {
+    var type = (type ? type.green : '')
+    var status = (status ? status.magenta : '')
+    var output = [type, status, message].join(' ')
+
+    console.log('pwm ' +  output)
+  }
+
+  var fail = function(type, error) {
+    if (exists) {
+      rm(hidden)
+    }
+    console.error('pwm ' + type.red + ' ' + error.message)
   }
 
   // Determine ./site/modules/{class_name} directory
@@ -60,6 +64,9 @@ var install = function(error, module, allowedVersion) {
   var exists = fs.existsSync(directory)
   if (exists) {
     var hidden = path.join(siteModules, '.old.' + module.class_name)
+    if (fs.existsSync(hidden)) {
+      rm(hidden)  
+    }
     fs.renameSync(directory, hidden)
   }
  
@@ -140,13 +147,11 @@ var install = function(error, module, allowedVersion) {
             ))
             return
           }
-          return fs.createReadStream(path.join(directory, files[0]))
-            .on('data', function(buffer) {
-              if (version) return
-              var result = buffer.toString().match(
-                /('|")version('|")\s+?=>\s+?([0-9]+)/
-              )
-              version = result ? toSemver(result[3]) : null
+          var moduleFile = path.join(directory, files[0])
+          findModuleVersion(moduleFile, function(error, version) {
+              if (version) {
+                version = toSemver(version)
+              }
               if (version && semver.satisfies(version, allowedVersion)) {
                 finish()
               }
