@@ -1,47 +1,30 @@
 #!/usr/bin/env node
 
+var program = require('commander')
+program.option('--save', 'Add module to module.json file')
+program.parse(process.argv)
+
 require('colors')
 var fs = require('fs')
 var path = require('path')
-var program = require('commander')
-var find = require('find-parent-dir')
 var request = require('hyperdirect').request
 var unzip = require('decompress').extract
 var glob = require('glob')
 var semver = require('semver')
 var rm = require('rimraf').sync
-var toSemver = require('../lib/version-to-semver')
-var findModuleVersion = require('../lib/find-module-version')
-var findRoot = require('../lib/find-root')
+
 var database = require('../lib/database')
+var findModuleVersion = require('../lib/find-module-version')
+var toSemver = require('../lib/version-to-semver')
 
-program.option('--save', 'Add module to module.json file')
-program.parse(process.argv)
-
-var root = findRoot()
-var siteModules = path.join(root, 'site/modules')
-if (!fs.existsSync(siteModules)) {
-  console.error(
-    'Unable to find the '.grey + 'site/modules'.yellow +
-    ' directory.\nTry re-running this command from the '.grey +
-    'project root.'.grey
-  )
-  process.exit(1)
-}
-
-// Load module.json
-var moduleJsonPath = path.join(root, 'module.json')
-var moduleJson = (fs.existsSync(moduleJsonPath) ?
-  require(moduleJsonPath) : {}
-)
+// Find things
+var root = require('../lib/find-project-root')()
+var siteModules = require('../lib/site-modules-or-die')(root)
+var json = require('../lib/get-module-json')(root)
+var jsonPath = path.join(root, 'module.json')
 
 // Install an individual module
-var install = function(error, module, allowedVersion) {
-  if (error) {
-    fail('lookup', error)
-    return
-  }
-
+var install = function(error, module, expectedVersion, strict) {
   var log = function(message, type, status) {
     var type = (type ? type.green : '')
     var status = (status ? status.magenta : '')
@@ -56,6 +39,13 @@ var install = function(error, module, allowedVersion) {
     }
     console.error('pwm ' + type.red + ' ' + error.message)
   }
+
+  if (error) {
+    fail('lookup', error)
+    return
+  }
+
+
 
   // Determine ./site/modules/{class_name} directory
   var directory = path.join(siteModules, module.class_name)
@@ -78,18 +68,22 @@ var install = function(error, module, allowedVersion) {
     .pipe(unzip({ ext: '.zip', path: directory }))
     .on('error', fail.bind(fail, 'unzip'))
     .on('close', function() {
-      var finish = function() {
+      var finish = function(version) {
 
         if (exists) {
           rm(hidden)
         }
 
+        if (version) {
+          module.module_version = version
+        }
+
         // Update/create module.json
         if (program.save) {
-          var modules = moduleJson.modules || {}
+          var modules = json.modules || {}
           modules[module.class_name] = '~' + module.module_version
-          moduleJson.modules = modules
-          fs.writeFileSync(moduleJsonPath, JSON.stringify(moduleJson, null, 2))
+          json.modules = modules
+          fs.writeFileSync(jsonPath, JSON.stringify(json, null, 2))
         }
 
         var announceInstall = function() {
@@ -138,62 +132,70 @@ var install = function(error, module, allowedVersion) {
       }
 
       // Double check that this version can be installed
-      if (allowedVersion) {
-        glob('*/*.module', { cwd: directory }, function(error, files) {
-          var version = null
-          if (error || !files.length) {
-            fail('versioncheck', error ? error : new Error(
-              'Couldn’t find the .module file'
-            ))
-            return
+      glob('*/*.module', { cwd: directory }, function(error, files) {
+        var version = null
+        if (error || !files.length) {
+          return fail('versioncheck', error ? error : new Error(
+            'Couldn’t find the .module file'
+          ))
+        }
+        var moduleFile = path.join(directory, files[0])
+        findModuleVersion(moduleFile, function(error, version) {
+          version = toSemver(version)
+          var valid = false
+          if (version) {
+            valid = semver.satisfies(version, expectedVersion)
           }
-          var moduleFile = path.join(directory, files[0])
-          findModuleVersion(moduleFile, function(error, version) {
-              if (version) {
-                version = toSemver(version)
-              }
-              if (version && semver.satisfies(version, allowedVersion)) {
-                finish()
-              }
-              else {
-                if (exists) {
-                  rm(directory)
-                  fs.renameSync(hidden, directory)
-                }
-                version ?
-                  fail('versioncheck', new Error(
-                    version + ' is not allowed. See module.json'
-                  )) :
-                  fail('semvercheck', new Error(
-                    'Invalid semver in the .module file'
-                  ))
-              }
-            })
+          if (valid) {
+            finish()
+          }
+          else if (!valid && !strict) {
+            console.log(
+              'pwm ' +
+              'version mismatch '.yellow +
+              'you should run `pwm update` when you have a second'.grey
+            )
+            finish(version)
+          }
+          else {
+            if (exists) {
+              rm(directory)
+              fs.renameSync(hidden, directory)
+            }
+            version ?
+              fail('versioncheck', new Error(
+                'Expected version ' + expectedVersion + ' but found ' + version
+              )) :
+              fail('semvercheck', new Error(
+                'Invalid semver in the .module file'
+              ))
+          }
         })
-      }
-      else {
-        finish()
-      }
+      })
     })
 }
 
 var toInstall = 0 
+var toBeInstalled = []
 var installed = []
 
-// Find modules passed into program
+// Install modules passed into program
 if (program.args.length) {
-  return program.args.forEach(function(identifier) {
-    toInstall++
-    database.find(identifier, install)
-  })
+  toBeInstalled = program.args
 }
 
-// Find modules in json
-var names = Object.keys(moduleJson.modules)
-if (names.length) {
-  names.forEach(function(name) {
-    var identifier = [name, moduleJson.modules[name]].join('@')
-    toInstall++
-    database.find(identifier, install)
-  })
+// Install modules from the module.json
+else {
+  var modules = json.modules
+  var names = Object.keys(modules)
+  if (names.length) {
+    toBeInstalled = names.map(function(name) {
+      return name + '@' + modules[name]  
+    })
+  }
 }
+
+toBeInstalled.forEach(function(identifier) {
+  database.find(identifier, install)
+  toInstall++
+})
