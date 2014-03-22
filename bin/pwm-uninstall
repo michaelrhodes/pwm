@@ -5,18 +5,17 @@ program.parse(process.argv)
 
 require('colors')
 var fs = require('fs')
-var path = require('path')
-var find = require('find-parent-dir')
+var join = require('path').join
 var rm = require('rimraf').sync
 
 var root = require('../lib/find-project-root')()
 var siteModules = require('../lib/site-modules-or-die')(root)
-var moduleJsonPath = path.join(root, 'module.json')
+var moduleJsonPath = join(root, 'module.json')
 
 // Find modules passed into program
 if (program.args.length) {
   return program.args.forEach(function(identifier) {
-    var module = path.join(siteModules, identifier)
+    var module = join(siteModules, identifier)
     if (!fs.existsSync(module)) {
       return console.error(
         identifier.red + ' is not installed.'.grey

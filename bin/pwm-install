@@ -6,7 +6,7 @@ program.parse(process.argv)
 
 require('colors')
 var fs = require('fs')
-var path = require('path')
+var join = require('path').join
 var request = require('hyperdirect').request
 var unzip = require('decompress').extract
 var glob = require('glob')
@@ -21,7 +21,7 @@ var toSemver = require('../lib/version-to-semver')
 var root = require('../lib/find-project-root')()
 var siteModules = require('../lib/site-modules-or-die')(root)
 var json = require('../lib/get-module-json')(root)
-var jsonPath = path.join(root, 'module.json')
+var jsonPath = join(root, 'module.json')
 
 // Install an individual module
 var install = function(error, module, expectedVersion, strict) {
@@ -48,12 +48,12 @@ var install = function(error, module, expectedVersion, strict) {
 
 
   // Determine ./site/modules/{class_name} directory
-  var directory = path.join(siteModules, module.class_name)
+  var directory = join(siteModules, module.class_name)
 
   // Blow away existing copies
   var exists = fs.existsSync(directory)
   if (exists) {
-    var hidden = path.join(siteModules, '.old.' + module.class_name)
+    var hidden = join(siteModules, '.old.' + module.class_name)
     if (fs.existsSync(hidden)) {
       rm(hidden)  
     }
@@ -101,7 +101,7 @@ var install = function(error, module, expectedVersion, strict) {
         glob('*', { cwd: directory }, function(error, files) {
           // Check for a wrapper directory. 
           if (files.length === 1) {
-            var file = path.join(directory, files[0])
+            var file = join(directory, files[0])
             return fs.stat(file, function(error, stat) {
               if (error) {
                 fail('cleanup', error.message)
@@ -111,7 +111,7 @@ var install = function(error, module, expectedVersion, strict) {
               // Replace ./site/module/{class_name} with a
               // renamed version of this wrapper directory.
               if (stat.isDirectory()) {
-                var temp = path.join(
+                var temp = join(
                   siteModules, '.' + module.class_name
                 ) 
                 fs.renameSync(file, temp)
@@ -139,7 +139,7 @@ var install = function(error, module, expectedVersion, strict) {
             'Couldn’t find the .module file'
           ))
         }
-        var moduleFile = path.join(directory, files[0])
+        var moduleFile = join(directory, files[0])
         findModuleVersion(moduleFile, function(error, version) {
           version = toSemver(version)
           var valid = false
