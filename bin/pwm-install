@@ -11,6 +11,7 @@ var request = require('hyperdirect').request
 var unzip = require('decompress').extract
 var glob = require('glob')
 var semver = require('semver')
+var split = require('split')
 var rm = require('rimraf').sync
 
 var database = require('../lib/database')
@@ -179,23 +180,34 @@ var toInstall = 0
 var toBeInstalled = []
 var installed = []
 
-// Install modules passed into program
-if (program.args.length) {
-  toBeInstalled = program.args
-}
+process.stdin
+  .on('end', function() {
+    // If no modules were requested via pipe…
+    if (!toBeInstalled.length) {
+      // Install modules passed into program
+      if (program.args.length) {
+        toBeInstalled = program.args
+      }
+      // Install modules from the module.json
+      else {
+        var modules = json.modules
+        var names = Object.keys(modules)
+        if (names.length) {
+          toBeInstalled = names.map(function(name) {
+            return name + '@' + modules[name]  
+          })
+        }
+      }
+    }
 
-// Install modules from the module.json
-else {
-  var modules = json.modules
-  var names = Object.keys(modules)
-  if (names.length) {
-    toBeInstalled = names.map(function(name) {
-      return name + '@' + modules[name]  
+    toBeInstalled.forEach(function(identifier) {
+      database.find(identifier, install)
+      toInstall++
     })
-  }
-}
-
-toBeInstalled.forEach(function(identifier) {
-  database.find(identifier, install)
-  toInstall++
-})
+  })
+  .pipe(split())
+  .on('data', function(chunk) {
+    if (chunk !== null) {
+      toBeInstalled.push(chunk)
+    }
+  })

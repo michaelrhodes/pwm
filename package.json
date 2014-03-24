@@ -38,7 +38,9 @@
     "rimraf": "~2.2.6",
     "decompress": "~0.1.6",
     "fuse.js": "git://github.com/krisk/Fuse",
-    "semver": "~2.2.1"
+    "semver": "~2.2.1",
+    "lpad": "~0.2.1",
+    "split": "~0.3.0"
   },
   "devDependencies": {
     "tape": "~2.10.2"

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
-require('colors')
 var program = require('commander')
-var database = require('../lib/database')
-
+program.option('-n, --names', 'Only output module names')
 program.parse(process.argv)
+
+require('colors')
+var database = require('../lib/database')
+var lpad = require('lpad')
 
 if (!program.args.length) {
   console.error('Please enter a search query')
@@ -19,12 +21,21 @@ database.search(query, function(error, results) {
       'No results for '.grey + query.yellow
     )
   }
-  console.log('')
+
+  if (!program.names) {
+    console.log()
+  }
+
   results.forEach(function(result) {
-    console.log(
-      '  ' + result.class_name.yellow + ': ' +
+    if (program.names) {
+      console.log(result.class_name)
+      return
+    }
+
+    console.log(lpad(
+      result.class_name.yellow + ': ' +
       result.summary + '\n' +
-      '  ' + result.url.grey + '\n'
-    )
+      result.url.grey + '\n'
+    , '  '))
   })
 })
