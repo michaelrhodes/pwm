@@ -6,7 +6,8 @@
     "pwm": "bin/pwm",
     "pwm-install": "bin/pwm-install",
     "pwm-uninstall": "bin/pwm-uninstall",
-    "pwm-search": "bin/pwm-search"
+    "pwm-search": "bin/pwm-search",
+    "pwm-fetch": "bin/pwm-fetch"
   },
   "scripts": {
     "test": "tape test/*.js"

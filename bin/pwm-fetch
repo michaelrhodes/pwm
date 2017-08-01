@@ -1,0 +1,37 @@
+#!/usr/bin/env node
+
+var program = require('commander')
+program.parse(process.argv)
+
+var request = require('hyperdirect').request
+var concat = require('concat-stream')
+var database = require('../lib/database')
+var url = 'http://modules.processwire.com/export-json/page{n}' +
+  '?apikey=pw300&limit=100&sort=modified'
+
+var n = 1
+var last
+
+function store (list, cb) {
+  var total = list.length
+  if (total) insert(0)
+
+  function insert (n) {
+    database.insert(list[n], function(error) {
+      if (error) return cb(error)
+      ++n < total ? insert(n) : cb(null)
+    })
+  }
+}
+
+;(function scrape () {
+  request(url.replace('{n}', n))
+    .pipe(concat(function(body) {
+      var page = JSON.parse(body)
+      store(page.items, function (error) {
+        if (error) return
+        if (last === void 0) last = page.pageTotal
+        if (n < last) scrape(++n)
+      })
+    }))
+})()
