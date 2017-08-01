@@ -8,10 +8,9 @@ require('colors')
 var fs = require('fs')
 var join = require('path').join
 var request = require('hyperdirect').request
-var unzip = require('decompress').extract
+var unzip = require('decompress')
 var glob = require('glob')
 var semver = require('semver')
-var split = require('split')
 var rm = require('rimraf').sync
 
 var database = require('../lib/database')
@@ -56,11 +55,11 @@ var install = function(error, module, expectedVersion, strict) {
   if (exists) {
     var hidden = join(siteModules, '.old.' + module.class_name)
     if (fs.existsSync(hidden)) {
-      rm(hidden)  
+      rm(hidden)
     }
     fs.renameSync(directory, hidden)
   }
- 
+
   // Download and unzip
   log(module.download_url, 'http', 'GET')
   request(module.download_url)
@@ -83,7 +82,13 @@ var install = function(error, module, expectedVersion, strict) {
         if (program.save) {
           var modules = json.modules || {}
           modules[module.class_name] = '~' + module.module_version
-          json.modules = modules
+          json.modules = (function sort (keys) {
+            var m = {}
+            keys.forEach(function (k) {
+              m[k] = modules[k]
+            })
+            return m
+          })(Object.keys(modules).sort())
           fs.writeFileSync(jsonPath, JSON.stringify(json, null, 2))
         }
 
@@ -100,7 +105,7 @@ var install = function(error, module, expectedVersion, strict) {
 
         // Look at what was installed.
         glob('*', { cwd: directory }, function(error, files) {
-          // Check for a wrapper directory. 
+          // Check for a wrapper directory.
           if (files.length === 1) {
             var file = join(directory, files[0])
             return fs.stat(file, function(error, stat) {
@@ -114,7 +119,7 @@ var install = function(error, module, expectedVersion, strict) {
               if (stat.isDirectory()) {
                 var temp = join(
                   siteModules, '.' + module.class_name
-                ) 
+                )
                 fs.renameSync(file, temp)
                 rm(directory)
                 fs.renameSync(temp, directory)
@@ -122,14 +127,14 @@ var install = function(error, module, expectedVersion, strict) {
 
               module.directory = directory
               installed.push(module)
-              announceInstall() 
+              announceInstall()
             })
           }
 
           module.directory = directory
           installed.push(module)
-          announceInstall() 
-        }) 
+          announceInstall()
+        })
       }
 
       // Double check that this version can be installed
@@ -176,38 +181,29 @@ var install = function(error, module, expectedVersion, strict) {
     })
 }
 
-var toInstall = 0 
+var toInstall = 0
 var toBeInstalled = []
 var installed = []
 
-process.stdin
-  .on('end', function() {
-    // If no modules were requested via pipe…
-    if (!toBeInstalled.length) {
-      // Install modules passed into program
-      if (program.args.length) {
-        toBeInstalled = program.args
-      }
-      // Install modules from the module.json
-      else {
-        var modules = json.modules
-        var names = Object.keys(modules)
-        if (names.length) {
-          toBeInstalled = names.map(function(name) {
-            return name + '@' + modules[name]  
-          })
-        }
-      }
+// If no modules were requested via pipe…
+if (!toBeInstalled.length) {
+  // Install modules passed into program
+  if (program.args.length) {
+    toBeInstalled = program.args
+  }
+  // Install modules from the module.json
+  else {
+    var modules = json.modules
+    var names = Object.keys(modules)
+    if (names.length) {
+      toBeInstalled = names.map(function(name) {
+        return name + '@' + modules[name]
+      })
     }
+  }
+}
 
-    toBeInstalled.forEach(function(identifier) {
-      database.find(identifier, install)
-      toInstall++
-    })
-  })
-  .pipe(split())
-  .on('data', function(chunk) {
-    if (chunk !== null) {
-      toBeInstalled.push(chunk)
-    }
-  })
+toBeInstalled.forEach(function(identifier) {
+  database.find(identifier, install)
+  toInstall++
+})
